@@ -6,11 +6,13 @@ import type {Session} from '@supabase/supabase-js'
 import {supabase} from './lib/supabase'
 import {db} from './lib/db'
 import {sync} from './lib/sync'
+import {openStored} from './lib/storage'
 import {getPrefs,setPrefs,type Prefs} from './prefs'
 import {Item,Calendar} from './App'
 import {Tournees,Optimiseur} from './Route'
 import Admin from './Admin'
 
+const eur=(n:number)=>new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(n)
 const day=(s:string)=>new Date(s).toLocaleDateString('sv')
 const ST=[['planifiee','Planifiée'],['en_cours','En cours'],['terminee','Terminée'],['a_replanifier','À replanifier']]
 const TITLES:Record<string,string>={'':"Vue d'ensemble",interventions:'Interventions',planning:'Planning',tournees:'Tournées et affectation',inventaire:'Mon inventaire et installations',materiel:'Matériel confié',documents:'Documents administratifs',factures:'Mes factures',apporteur:'Mon lien apporteur',optimiseur:'Optimiseur de tournée',admin:'Administration'}
@@ -81,10 +83,11 @@ function Documents({uid}:{uid:string}){
     const up=await supabase.storage.from('documents').upload(path,file);if(up.error)return setErr(up.error.message)
     const ins=await supabase.from('documents').insert({tech_id:uid,type:f.type,title:f.title||f.type,issued_on:f.issued||null,expires_on:f.expires||null,file_path:path});if(ins.error)return setErr(ins.error.message)
     setOpen(false);setFile(null);setF(empty);load()}
-  const view=async(p:string)=>{const{data}=await supabase.storage.from('documents').createSignedUrl(p,60);if(data)window.open(data.signedUrl,'_blank')}
+  const[vmsg,setVmsg]=useState('')
+  const view=async(p:string)=>setVmsg(await openStored('documents',p))
   const today=day(new Date().toISOString())
   return <div className="card"><div className="row"><h2>Mes documents</h2><button style={{width:'auto'}} onClick={()=>setOpen(true)}>+ Ajouter un document</button></div>
-    {(rows??[]).map(d=><div className="row card" key={d.id}><span><b>{d.title}</b><div className="mute">{d.type}{d.expires_on?` · expire le ${d.expires_on}`:''}</div></span>
+    {vmsg&&<p className="err">{vmsg}</p>}{(rows??[]).map(d=><div className="row card" key={d.id}><span><b>{d.title}</b><div className="mute">{d.type}{d.expires_on?` · expire le ${d.expires_on}`:''}</div></span>
       <span>{d.expires_on&&d.expires_on<today&&<span className="chip a_replanifier">Expiré</span>} <button className="ghost" onClick={()=>view(d.file_path)}>Ouvrir</button></span></div>)}
     {rows&&!rows.length&&<p className="mute">Aucun document enregistré.</p>}
     {open&&<Modal title="Ajouter un document" onClose={()=>setOpen(false)}>
@@ -121,7 +124,7 @@ function Factures({uid,name}:{uid:string;name:string}){
       {([['company_name','Raison sociale'],['siret','SIRET'],['vat','N° TVA'],['address','Adresse'],['iban','IBAN'],['bic','BIC']] as [keyof Bill,string][]).map(([k,l])=><div key={k}><div className="mute">{l}</div><b>{bp[k]||'—'}</b></div>)}
       {missing.length>0&&<p className="err">À compléter pour des factures conformes : {missing.join(', ')}.</p>}</>}</div>
     <div className="card"><div className="row"><h2>Mes factures</h2><button style={{width:'auto'}} onClick={()=>setNf(true)}>+ Nouvelle facture</button></div>
-      {(inv??[]).map(i=><div className="row" key={i.id}><span><b>{i.number}</b><div className="mute">{i.client}</div></span><span><b>{Number(i.amount).toFixed(2)} €</b> <button className="ghost" onClick={()=>pdf(i)}>PDF</button></span></div>)}
+      {(inv??[]).map(i=><div className="row" key={i.id}><span><b>{i.number}</b><div className="mute">{i.client}</div></span><span><b>{eur(Number(i.amount))}</b> <button className="ghost" onClick={()=>pdf(i)}>PDF</button></span></div>)}
       {inv&&!inv.length&&<p className="mute">Aucune facture.</p>}</div>
     {nf&&<Modal title="Nouvelle facture" onClose={()=>setNf(false)}><label>Client<input value={f.client} onChange={e=>setF({...f,client:e.target.value})}/></label>
       <label>Montant (€)<input inputMode="decimal" value={f.amount} onChange={e=>setF({...f,amount:e.target.value})}/></label>{err&&<p className="err">{err}</p>}<button onClick={addInv}>Créer la facture</button></Modal>}</>

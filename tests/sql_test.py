@@ -2,7 +2,8 @@ import pgserver, psycopg, uuid, shutil, sys
 shutil.rmtree('/tmp/pgdata',ignore_errors=True)
 srv=pgserver.get_server('/tmp/pgdata',cleanup_mode='stop')
 conn=psycopg.connect(srv.get_uri(),autocommit=True)
-S='/home/claude/terrain/supabase/'
+import os
+S=os.path.join(os.path.dirname(os.path.abspath(__file__)),'..','supabase')+'/'
 conn.execute("""
 create schema auth; create schema storage;
 create table auth.users(id uuid primary key default gen_random_uuid(), email text, raw_user_meta_data jsonb);
@@ -17,7 +18,7 @@ def check(name,cond,detail=''):
     global ok,ko
     if cond: ok+=1;print('PASS',name)
     else: ko+=1;print('FAIL',name,detail)
-for f in ['schema.sql','002_stock_activity.sql','003_main_app.sql','004_admin.sql','005_security.sql']:
+for f in ['schema.sql','002_stock_activity.sql','003_main_app.sql','004_admin.sql','005_security.sql','006_admin_app.sql']:
     try: conn.execute(open(S+f).read()); check('migration '+f,True)
     except Exception as e: check('migration '+f,False,str(e)[:200]); sys.exit(1)
 conn.execute("""grant usage on schema public,auth,storage to authenticated; grant all on all tables in schema public to authenticated;
@@ -86,4 +87,23 @@ check('tech1 dépose un fichier dans son dossier',run(T1,"insert into storage.ob
 check('tech1 NE PEUT PAS déposer chez tech2',run(T1,"insert into storage.objects(bucket_id,name) values('documents',%s)",(f'{T2}/doc.pdf',))[0]=='err')
 check('tech2 ne voit pas le fichier de tech1',run(T2,"select 1 from storage.objects")[1]==[])
 check('admin voit le fichier de tech1',len(run(A,"select 1 from storage.objects")[1])==1)
+
+# ---- app admin (006) ----
+inv1=conn.execute("select id from invoices where tech_id=%s",(T1,)).fetchone()[0]
+check('admin change le statut de la facture d\'un technicien',run(A,"update invoices set status='payee' where id=%s",(inv1,))[1]==1)
+check('tech2 NE PEUT PAS modifier la facture de tech1',run(T2,"update invoices set status='brouillon' where id=%s",(inv1,))[1]==0)
+check('tech1 modifie toujours sa propre facture',run(T1,"update invoices set status='envoyee' where id=%s",(inv1,))[1]==1)
+check('tech1 NE PEUT PAS créer une facture au nom de tech2',run(T1,"insert into invoices(tech_id,number,client) values(%s,'X','Y')",(T2,))[0]=='err')
+check('admin voit toutes les factures',len(run(A,"select 1 from invoices")[1])==1)
+check('admin voit les documents des techniciens',len(run(A,"select 1 from documents")[1])==1)
+check("admin voit l'activité des techniciens",len(run(A,"select 1 from activity")[1])==1)
+check('admin voit les PV de tous',len(run(A,"select 1 from pv")[1])==1)
+check('referrals.paid vaut false par défaut',run(A,"insert into referrals(referrer_id,kind) values(%s,'installation') returning paid",(T1,))[1]==[(False,)])
+rid=conn.execute("select id from referrals").fetchone()[0]
+check('tech1 voit son parrainage',len(run(T1,"select 1 from referrals")[1])==1)
+check('tech2 ne voit pas le parrainage de tech1',run(T2,"select 1 from referrals")[1]==[])
+check('tech1 NE PEUT PAS se marquer payé',run(T1,"update referrals set paid=true where id=%s",(rid,))[1]==0)
+check('admin marque payé',run(A,"update referrals set paid=true where id=%s",(rid,))[1]==1)
+check('admin voit les profils de tous',len(run(A,"select 1 from profiles")[1])==3)
+check('tech1 ne voit que son profil',len(run(T1,"select 1 from profiles")[1])==1)
 print(f'\nRESULTAT : {ok} réussis, {ko} échoués')

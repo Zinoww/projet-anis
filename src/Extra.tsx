@@ -54,10 +54,10 @@ export function Activity(){
   const save=async()=>{await db.activity.put({day:today,hours:+f.hours||0,km:+f.km||0,fees:+f.fees||0,synced:0});sync()}
   const fld=(k:'hours'|'km'|'fees',l:string)=><label>{l}<input inputMode="decimal" value={f[k]} onChange={e=>setF({...f,[k]:e.target.value})}/></label>
   return <main><h1>Activité</h1>
-    <div className="card row"><span><b>{mois.length}</b> jour(s)</span><span><b>{sum('hours')}</b> h</span><span><b>{sum('km')}</b> km</span><span><b>{sum('fees')}</b> €</span></div>
+    <div className="card row"><span><b>{mois.length}</b> jour(s)</span><span><b>{sum('hours').toLocaleString('fr-FR')}</b> h</span><span><b>{sum('km').toLocaleString('fr-FR')}</b> km</span><span><b>{sum('fees').toLocaleString('fr-FR')}</b> €</span></div>
     <h2>Déclarer ma journée d'aujourd'hui</h2>{fld('hours','Heures travaillées')}{fld('km','Kilomètres')}{fld('fees','Frais (€)')}
     <button onClick={save}>Enregistrer</button>
-    <h2>Historique</h2>{all.slice(0,10).map(a=><div className="card row" key={a.day}><span>{new Date(a.day+'T12:00').toLocaleDateString('fr',{weekday:'short',day:'numeric',month:'short'})}</span><span className="mute">{a.hours} h · {a.km} km · {a.fees} €</span><span className="chip">{a.synced?'Envoyée':'En attente'}</span></div>)}</main>
+    <h2>Historique</h2>{all.slice(0,10).map(a=><div className="card row" key={a.day}><span>{new Date(a.day+'T12:00').toLocaleDateString('fr',{weekday:'short',day:'numeric',month:'short'})}</span><span className="mute">{a.hours.toLocaleString('fr-FR')} h · {a.km.toLocaleString('fr-FR')} km · {a.fees.toLocaleString('fr-FR')} €</span><span className="chip">{a.synced?'Envoyée':'En attente'}</span></div>)}</main>
 }
 
 export function PVs(){

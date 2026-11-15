@@ -75,7 +75,7 @@ function Sign({onChange}:{onChange:(d:string|null)=>void}){
 function Detail({uid}:{uid:string}){
   const{id}=useParams(),nav=useNavigate()
   const it=useLiveQuery(()=>db.interventions.get(id!),[id])
-  const pending=useLiveQuery(()=>db.outbox.where('intervention_id').equals(id!).count(),[id])
+  const pending=useLiveQuery(()=>db.outbox.filter(p=>p.intervention_id===id).count(),[id])
   const[outcome,setO]=useState<'ok'|'ko'>('ok'),[work,setW]=useState(''),[photos,setPh]=useState<Blob[]>([]),[sig,setSig]=useState<string|null>(null)
   const[t0]=useState(()=>new Date().toISOString()),[err,setErr]=useState('')
   if(!it)return <main><p className="mute">Chargement…</p></main>
