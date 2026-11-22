@@ -86,8 +86,15 @@ function Detail({uid}:{uid:string}){
     await db.interventions.update(it.id,{status:outcome==='ok'?'terminee':'a_replanifier'})
     sync();nav('/')}
   const start=async()=>{await db.interventions.update(it.id,{status:'en_cours'});await db.statusops.add({intervention_id:it.id,status:'en_cours'});sync()}
+  const detailRows=Object.entries(it.details??{}).filter(([,value])=>value!==null&&value!==''&&value!==undefined)
   return <main><button className="ghost" onClick={()=>nav(-1)}>‹ Retour</button><h1>{it.client}</h1>
-    <p className="mute">{[it.address,it.city].filter(Boolean).join(', ')}</p><Chip s={it.status}/>{it.notes&&<p>{it.notes}</p>}
+    <p className="mute">{[it.address,it.city,it.postal_code].filter(Boolean).join(', ')}</p>
+    <Chip s={it.status}/>
+    {it.ref&&<p><b>Référence dossier :</b> {it.ref}</p>}
+    {it.notes&&<p><b>Notes administratives :</b> {it.notes}</p>}
+    {detailRows.length>0&&<div className="card"><h2>Détails de l'intervention</h2>
+      {detailRows.map(([label,value])=><p key={label}><b>{label.replace(/_/g,' ').replace(/^\w/, (c:string)=>c.toUpperCase())} :</b> {String(value)}</p>)}
+    </div>}
     {pending?<p className="mute">PV enregistré, en attente de réseau.</p>:it.status==='terminee'?<p className="mute">Intervention terminée.</p>:<>
       {it.status==='planifiee'&&<><p/><button onClick={start}>Démarrer l'intervention</button></>}
       <h2>Procès-verbal</h2>

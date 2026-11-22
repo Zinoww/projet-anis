@@ -25,7 +25,7 @@ async function pass():Promise<string|null>{
   await step(async()=>{for(const a of await db.activity.where('synced').equals(0).toArray()){const{synced:_s,...r}=a;const{error}=await supabase.from('activity').upsert({...r,tech_id:uid});if(error)throw error;await db.activity.update(a.day,{synced:1})}})
   // --- recevoir ---
   await step(async()=>{
-    const{data,error}=await supabase.from('interventions').select('id,ref,client,address,city,scheduled_at,status,notes');if(error)throw error
+    const{data,error}=await supabase.from('interventions').select('*');if(error)throw error
     const[ops,pend]=await Promise.all([db.statusops.toArray(),db.outbox.toArray()])
     const rows=(data as Intervention[]).map(r=>{let status=r.status
       for(const o of ops)if(o.intervention_id===r.id)status=o.status
