@@ -9,5 +9,5 @@ Hors-ligne : les PV sont stockés dans IndexedDB et envoyés automatiquement au 
 ## Déploiement GitHub Pages
 1. Pousser sur la branche `main` d'un dépôt GitHub public.
 2. Settings > Pages > Source : GitHub Actions.
-3. Settings > Secrets and variables > Actions : ajouter VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY (et VITE_REFERRAL_BASE).
+3. Settings > Secrets and variables > Actions : ajouter VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY.
 4. Chaque `git push` sur `main` redéploie automatiquement.
